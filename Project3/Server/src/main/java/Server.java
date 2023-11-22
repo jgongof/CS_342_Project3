@@ -13,8 +13,11 @@ public class Server{
 	ServerThreads server;
 	private Consumer<Serializable> callback;
 	public int port;
-
+	Connectivity connectivity;
 	CreateCategories categories;
+
+	int attempts; //6 attempts
+	int chances;//3 chances
 
 
 	Server(Consumer<Serializable> call, int port){
@@ -33,7 +36,8 @@ public class Server{
 
 	public class ServerThreads extends Thread{
 
-		
+
+
 		public void run() {
 
 			try(ServerSocket mysocket = new ServerSocket(port)){
