@@ -40,9 +40,9 @@ public class ServerGUI extends Application{
         // TODO Auto-generated method stub
         primaryStage.setTitle("Server");
         //create a listview to see every action from the clients
-        listItems.setStyle("-fx-background-color: white; -fx-border-color: pink");
+        listItems.setStyle("-fx-background-color: white; -fx-border-color: pink; -fx-border-width: 30");
         BorderPane root = new BorderPane();
-        root.setPadding(new Insets(70));
+        root.setPadding(new Insets(10));
         root.setStyle("-fx-background-color: white");
         root.setCenter(listItems);
 
