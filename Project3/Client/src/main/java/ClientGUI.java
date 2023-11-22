@@ -41,7 +41,9 @@ public class ClientGUI extends Application{
 	TextField portTextField;
 	Button connect;
 	Label portInstruction, errorLabel;
-	Server serverConnection; // be able to connect to server
+
+	Connectivity connectivity = new Connectivity();
+	//Server serverConnection; // be able to connect to server
 	Client clientConnection;
 	int port;
 	ListView<String> listItems = new ListView<String>();
@@ -67,9 +69,9 @@ public class ClientGUI extends Application{
 				if(port >= 0)
 				{
 
-					serverConnection = new Server(data -> {
+					clientConnection = new Client(data -> {
 						Platform.runLater(() -> {
-							listItems.getItems().add(data.toString());
+							connectivity = (Connectivity) data;
 						});
 					}, port);
 				}
