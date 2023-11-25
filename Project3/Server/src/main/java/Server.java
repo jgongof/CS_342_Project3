@@ -4,20 +4,21 @@ import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.function.Consumer;
 
-public class Server{
+public class Server extends Thread{
 
 	int playersCount = 0;
 	ArrayList<ClientThread> players = new ArrayList<ClientThread>();
 	ServerThreads server;
 	private Consumer<Serializable> callback;
 	public int port;
-	Connectivity connectivity;
 	CreateCategories categories;
 
-	int attempts; //6 attempts
+	String guessingWord;
 	int chances;//3 chances
+	Connectivity connectivity;
 
 
 	Server(Consumer<Serializable> call, int port){
@@ -32,35 +33,46 @@ public class Server{
 		String announcement2 = "Server Is Waiting For A Connection...";
 		callback.accept(announcement2);
 	}
+	public void sendUpdatedConnectivity(Connectivity updatedConnectivity) {
+		for (ClientThread t : players) {
+			try {
+				t.out.writeObject(updatedConnectivity);
+			} catch (Exception e) {
+				e.printStackTrace();;
+			}
+		}
+	}
+
+	public void updatePlayersConnectivity() {
+		sendUpdatedConnectivity(connectivity);
+
+	}
 
 
 	public class ServerThreads extends Thread{
-
-
 
 		public void run() {
 
 			try(ServerSocket mysocket = new ServerSocket(port)){
 		    System.out.println("Player Is Connecting...");
-		  
-			
+
 		    while(true) {
 
 				playersCount++;
 				ClientThread playerThread = new ClientThread(mysocket.accept(), playersCount);
-				callback.accept("PLayer Connected To Server: " + "Player #" + playersCount);
 				players.add(playerThread);
+				callback.accept("Player Connected To Server: " + "Player #" + playersCount);
 				System.out.println("Player has connected to the server.");
 				playerThread.start();
 
 			    }
 			}
 				catch(Exception e) {
-					callback.accept("Server Socket Did Not Launch");
+				//	callback.accept("Server Socket Did Not Launch");
 				}
 			}
-		}
-	
+
+	}
 
 		public class ClientThread extends Thread {
 
@@ -68,6 +80,9 @@ public class Server{
 			int playerCount;
 			ObjectInputStream in;
 			ObjectOutputStream out;
+			//String randomWord = "";
+			//Connectivity connectivity = new Connectivity();
+			GameLogic gameLogic = new GameLogic();
 
 
 			ClientThread(Socket s, int count) {
@@ -75,13 +90,46 @@ public class Server{
 				this.playerCount = count;
 			}
 
+			public void initialization(int playerNumber)
+			{
+				GameLogic gameLogic1 = new GameLogic();
+				ClientThread temp = players.get(playerNumber - 1);
+
+				connectivity.correctDessert = gameLogic1.chooseRandomWord(1);
+				connectivity.correctFairyTale = gameLogic1.chooseRandomWord(2);
+				connectivity.correctCity = gameLogic1.chooseRandomWord(3);
+
+
+				connectivity.dessertWordLength = connectivity.correctDessert.length();
+				connectivity.ftWordLength = connectivity.correctFairyTale.length();
+				connectivity.citiesWordLength = connectivity.correctCity.length();
+
+				connectivity.attempts = 6;
+
+				connectivity.gotCorrectLetter = false;
+				connectivity.gotCorrectWord = false;
+
+				connectivity.desserts_attempts = 3;
+				connectivity.fairytales_attempts = 3;
+				connectivity.cities_attempts = 3;
+
+				try{
+					temp.out.writeObject(connectivity);
+				}catch(Exception e){
+					System.out.println("Error: " + e.getMessage());
+				}
+
+			}
+
+
+			//updateClients("New Player On Server. Player #" + playerCount);
 			public void updateClients(String message) {
-				for (int i = 0; i < players.size(); i++) {
+				for(int i = 0; i < players.size(); i++) {
 					ClientThread t = players.get(i);
 					try {
 						t.out.writeObject(message);
-					} catch (Exception e) {
 					}
+					catch(Exception e) {}
 				}
 			}
 
@@ -94,19 +142,40 @@ public class Server{
 				} catch (Exception e) {
 					System.out.println("Streams Are Not Open");
 				}
+				updateClients("New Player Has Arrived: Player#" + playerCount);
 
-				updateClients("New Player On Server. Player #" + playerCount);
+				connectivity = new Connectivity();
+
+				initialization(playerCount);
 
 				while (true) {
 					try {
-						String data = in.readObject().toString();
-						callback.accept("Player: " + playerCount + " Sent: " + data);
-						updateClients("Player #" + playerCount + " Said: " + data);
+						connectivity = (Connectivity) in.readObject(); ;
+						String message = "Player #" + playerCount + ": " + connectivity.playerActivity;
+						callback.accept(message);
+						connectivity.playerActivity = "";
+						System.out.println("Category Number: " + connectivity.categoryNumber);
+						switch(connectivity.categoryNumber)
+						{
+							case 1:
+								System.out.println("Word to guess: " + connectivity.correctDessert);
+								System.out.println("Length: " + connectivity.dessertWordLength);
+								//logic
+							case 2:
+								System.out.println("Word to guess: " + connectivity.correctFairyTale);
+								System.out.println("Length: " + connectivity.ftWordLength);
+							case 3:
+								System.out.println("Word to guess: " + connectivity.correctCity);
+								System.out.println("Length: " + connectivity.citiesWordLength);
+
+						}
+
 
 					} catch (Exception e) {
 						callback.accept("Something Wrong Happened With The Socket From Player #: " + playerCount + " closing down!");
-						updateClients("Player #" + playerCount + " has left the server!");
+						//updateClients("Player #" + playerCount + " has left the server!");
 						players.remove(this);
+						playersCount--;
 						break;
 					}
 				}
